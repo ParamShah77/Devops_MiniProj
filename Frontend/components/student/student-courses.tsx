@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { BookOpen, Lock, CheckCircle2, LogOut, Users } from "lucide-react"
+import { BookOpen, Lock, CheckCircle2, LogOut, Users, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +13,8 @@ export function StudentCourses() {
   const { user, courses, enrollInCourse, unenrollFromCourse } = useAuth()
   const [enrollDialog, setEnrollDialog] = useState<string | null>(null)
   const [password, setPassword] = useState("")
+  const [enrolling, setEnrolling] = useState(false)
+  const [unenrolling, setUnenrolling] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   if (!user) return null
@@ -20,25 +22,44 @@ export function StudentCourses() {
   const enrolledCourses = courses.filter((c) => c.enrolledStudents.includes(user.id))
   const availableCourses = courses.filter((c) => !c.enrolledStudents.includes(user.id))
 
-  const handleEnroll = (e: React.FormEvent) => {
+  const handleEnroll = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!enrollDialog) return
-    const result = enrollInCourse(enrollDialog, password)
-    setMessage({ type: result.success ? "success" : "error", text: result.message })
-    if (result.success) {
-      setTimeout(() => {
-        setEnrollDialog(null)
-        setPassword("")
-        setMessage(null)
-      }, 1200)
+    setMessage(null)
+    setEnrolling(true)
+    try {
+      const result = await enrollInCourse(enrollDialog, password)
+      setMessage({ type: result.success ? "success" : "error", text: result.message })
+      if (result.success) {
+        setTimeout(() => {
+          setEnrollDialog(null)
+          setPassword("")
+          setMessage(null)
+        }, 1200)
+      }
+    } catch {
+      setMessage({ type: "error", text: "Enrollment failed. Please try again." })
+    } finally {
+      setEnrolling(false)
+    }
+  }
+
+  const handleUnenroll = async (courseId: string) => {
+    setUnenrolling(courseId)
+    try {
+      await unenrollFromCourse(courseId)
+    } finally {
+      setUnenrolling(null)
     }
   }
 
   return (
     <div>
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-foreground">Courses</h2>
-        <p className="text-sm text-muted-foreground">View your enrolled courses and browse available courses</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold text-foreground">Courses</h2>
+          <p className="text-sm text-muted-foreground">View your enrolled courses and browse available courses</p>
+        </div>
       </div>
 
       <Tabs defaultValue="enrolled" className="w-full">
@@ -69,11 +90,13 @@ export function StudentCourses() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => unenrollFromCourse(course.id)}
+                      onClick={() => handleUnenroll(course.id)}
+                      disabled={unenrolling === course.id}
                       className="h-8 text-xs text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                     >
-                      <LogOut className="mr-1 h-3 w-3" />
-                      Unenroll
+                      {unenrolling === course.id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <><LogOut className="mr-1 h-3 w-3" />Unenroll</>}
                     </Button>
                   </div>
                   <p className="mb-1 text-xs font-medium uppercase tracking-wider text-primary">{course.code}</p>
@@ -175,11 +198,11 @@ export function StudentCourses() {
               </div>
             )}
             <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => { setEnrollDialog(null); setPassword(""); setMessage(null) }}>
+              <Button type="button" variant="outline" onClick={() => { setEnrollDialog(null); setPassword(""); setMessage(null) }} disabled={enrolling}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                Enroll
+              <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={enrolling}>
+                {enrolling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enrolling...</> : "Enroll"}
               </Button>
             </div>
           </form>

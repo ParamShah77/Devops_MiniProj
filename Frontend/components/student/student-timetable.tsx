@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Clock } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
@@ -7,6 +8,13 @@ const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 
 export function StudentTimetable() {
   const { user, courses, timetable } = useAuth()
+  const [todayName, setTodayName] = useState<string>("")
+
+  useEffect(() => {
+    const today = new Date()
+    const currentDay = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][today.getDay()]
+    setTodayName(currentDay)
+  }, [])
 
   if (!user) return null
 
@@ -17,9 +25,6 @@ export function StudentTimetable() {
     day,
     entries: myTimetable.filter((t) => t.day === day).sort((a, b) => a.startTime.localeCompare(b.startTime)),
   })).filter((g) => g.entries.length > 0)
-
-  const today = new Date()
-  const todayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][today.getDay()]
 
   return (
     <div>

@@ -1,13 +1,14 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
 import type { User, UserRole, Course, TimetableEntry, Notice } from "./store"
-import { DEMO_COURSES, DEMO_TIMETABLE, DEMO_NOTICES, DEMO_USERS } from "./store"
+import { authAPI, coursesAPI, timetableAPI, noticesAPI } from "./api"
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string, role: UserRole) => boolean
-  signup: (name: string, email: string, password: string, role: UserRole, department: string) => boolean
+  loading: boolean
+  login: (email: string, password: string, role: UserRole) => Promise<boolean>
+  signup: (name: string, email: string, password: string, role: UserRole, department: string) => Promise<boolean>
   logout: () => void
   courses: Course[]
   setCourses: React.Dispatch<React.SetStateAction<Course[]>>
@@ -15,79 +16,186 @@ interface AuthContextType {
   setTimetable: React.Dispatch<React.SetStateAction<TimetableEntry[]>>
   notices: Notice[]
   setNotices: React.Dispatch<React.SetStateAction<Notice[]>>
-  enrollInCourse: (courseId: string, password: string) => { success: boolean; message: string }
-  unenrollFromCourse: (courseId: string) => void
+  enrollInCourse: (courseId: string, password: string) => Promise<{ success: boolean; message: string }>
+  unenrollFromCourse: (courseId: string) => Promise<void>
+  fetchData: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [courses, setCourses] = useState<Course[]>(DEMO_COURSES)
-  const [timetable, setTimetable] = useState<TimetableEntry[]>(DEMO_TIMETABLE)
-  const [notices, setNotices] = useState<Notice[]>(DEMO_NOTICES)
-  const [registeredUsers, setRegisteredUsers] = useState(DEMO_USERS)
+  const [loading, setLoading] = useState(true)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [timetable, setTimetable] = useState<TimetableEntry[]>([])
+  const [notices, setNotices] = useState<Notice[]>([])
 
-  const login = useCallback((email: string, _password: string, role: UserRole): boolean => {
-    const userList = role === "student" ? registeredUsers.students : registeredUsers.teachers
-    const found = userList.find((u) => u.email.toLowerCase() === email.toLowerCase())
-    if (found) {
-      setUser(found)
-      return true
-    }
-    return false
-  }, [registeredUsers])
+  // Fetch all data (courses, timetable, notices)
+  const fetchData = useCallback(async () => {
+    try{
+      const [coursesData, timetableData, noticesData] = await Promise.all([
+        coursesAPI.getAll().catch(err => {
+          console.error('Courses API error:', err)
+          return []
+        }),
+        timetableAPI.getAll().catch(err => {
+          console.error('Timetable API error:', err)
+          return []
+        }),
+        noticesAPI.getAll().catch(err => {
+          console.error('Notices API error:', err)
+          return []
+        })
+      ])
 
-  const signup = useCallback((name: string, email: string, _password: string, role: UserRole, department: string): boolean => {
-    const allUsers = [...registeredUsers.students, ...registeredUsers.teachers]
-    if (allUsers.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-      return false
-    }
-    const newUser: User = {
-      id: `${role[0]}${Date.now()}`,
-      name,
-      email,
-      role,
-      department,
-    }
-    if (role === "student") {
-      setRegisteredUsers((prev) => ({ ...prev, students: [...prev.students, newUser] }))
-    } else {
-      setRegisteredUsers((prev) => ({ ...prev, teachers: [...prev.teachers, newUser] }))
-    }
-    setUser(newUser)
-    return true
-  }, [registeredUsers])
+      setCourses((coursesData || []).map((course: any) => ({
+        id: course._id,
+        name: course.name,
+        code: course.code,
+        teacher: course.teacher,
+        teacherId: course.teacherId._id || course.teacherId,
+        department: course.department,
+        credits: course.credits,
+        enrollmentPassword: course.enrollmentPassword,
+        description: course.description,
+        enrolledStudents: (course.enrolledStudents || []).map((s: any) => s._id || s)
+      })))
 
-  const logout = useCallback(() => {
-    setUser(null)
+      setTimetable((timetableData || []).map((entry: any) => ({
+        id: entry._id,
+        courseId: entry.courseId._id || entry.courseId,
+        courseName: entry.courseName,
+        courseCode: entry.courseCode,
+        day: entry.day,
+        startTime: entry.startTime,
+        endTime: entry.endTime,
+        room: entry.room,
+        teacher: entry.teacher
+      })))
+
+      setNotices((noticesData || []).map((notice: any) => ({
+        id: notice._id,
+        title: notice.title,
+        content: notice.content,
+        author: notice.author,
+        authorId: notice.authorId._id || notice.authorId,
+        date: new Date(notice.createdAt).toISOString().split('T')[0],
+        priority: notice.priority,
+        department: notice.department
+      })))
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    }
   }, [])
 
-  const enrollInCourse = useCallback((courseId: string, password: string) => {
-    if (!user || user.role !== "student") return { success: false, message: "Not authorized" }
-    const course = courses.find((c) => c.id === courseId)
-    if (!course) return { success: false, message: "Course not found" }
-    if (course.enrolledStudents.includes(user.id)) return { success: false, message: "Already enrolled" }
-    if (course.enrollmentPassword !== password) return { success: false, message: "Incorrect enrollment password" }
+  // Load user from localStorage on mount
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (token) {
+          const userData = await authAPI.getCurrentUser()
+          setUser({
+            id: userData._id,
+            name: userData.name,
+            email: userData.email,
+            role: userData.role,
+            department: userData.department
+          })
+          await fetchData()
+        }
+      } catch (error) {
+        console.error('Error loading user:', error)
+        authAPI.logout()
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    setCourses((prev) =>
-      prev.map((c) => (c.id === courseId ? { ...c, enrolledStudents: [...c.enrolledStudents, user.id] } : c))
-    )
-    return { success: true, message: "Successfully enrolled" }
-  }, [user, courses])
+    loadUser()
+  }, [fetchData])
 
-  const unenrollFromCourse = useCallback((courseId: string) => {
-    if (!user) return
-    setCourses((prev) =>
-      prev.map((c) =>
-        c.id === courseId ? { ...c, enrolledStudents: c.enrolledStudents.filter((id) => id !== user.id) } : c
-      )
-    )
-  }, [user])
+  const login = useCallback(async (email: string, password: string, role: UserRole): Promise<boolean> => {
+    try {
+      const data = await authAPI.login(email, password, role)
+      setUser({
+        id: data._id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        department: data.department
+      })
+      await fetchData()
+      return true
+    } catch (error) {
+      console.error('Login error:', error)
+      return false
+    }
+  }, [fetchData])
+
+  const signup = useCallback(async (name: string, email: string, password: string, role: UserRole, department: string): Promise<boolean> => {
+    try {
+      const data = await authAPI.register(name, email, password, role, department)
+      setUser({
+        id: data._id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        department: data.department
+      })
+      await fetchData()
+      return true
+    } catch (error) {
+      console.error('Signup error:', error)
+      return false
+    }
+  }, [fetchData])
+
+  const logout = useCallback(() => {
+    authAPI.logout()
+    setUser(null)
+    setCourses([])
+    setTimetable([])
+    setNotices([])
+  }, [])
+
+  const enrollInCourse = useCallback(async (courseId: string, password: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      await coursesAPI.enroll(courseId, password)
+      await fetchData()
+      return { success: true, message: "Successfully enrolled" }
+    } catch (error: any) {
+      return { success: false, message: error.message || "Enrollment failed" }
+    }
+  }, [fetchData])
+
+  const unenrollFromCourse = useCallback(async (courseId: string): Promise<void> => {
+    try {
+      await coursesAPI.unenroll(courseId)
+      await fetchData()
+    } catch (error) {
+      console.error('Unenroll error:', error)
+    }
+  }, [fetchData])
 
   return (
     <AuthContext.Provider
-      value={{ user, login, signup, logout, courses, setCourses, timetable, setTimetable, notices, setNotices, enrollInCourse, unenrollFromCourse }}
+      value={{
+        user,
+        loading,
+        login,
+        signup,
+        logout,
+        courses,
+        setCourses,
+        timetable,
+        setTimetable,
+        notices,
+        setNotices,
+        enrollInCourse,
+        unenrollFromCourse,
+        fetchData
+      }}
     >
       {children}
     </AuthContext.Provider>

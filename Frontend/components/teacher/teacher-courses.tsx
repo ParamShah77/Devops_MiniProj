@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Users, Lock, BookOpen, Trash2 } from "lucide-react"
+import { Plus, Users, Lock, BookOpen, Trash2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,11 +9,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/lib/auth-context"
-import type { Course } from "@/lib/store"
+import { coursesAPI } from "@/lib/api"
 
 export function TeacherCourses() {
-  const { user, courses, setCourses } = useAuth()
+  const { user, courses, fetchData } = useAuth()
   const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -27,27 +30,39 @@ export function TeacherCourses() {
 
   const myCourses = courses.filter((c) => c.teacherId === user.id)
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
-    const newCourse: Course = {
-      id: `c${Date.now()}`,
-      name: formData.name,
-      code: formData.code.toUpperCase(),
-      teacher: user.name,
-      teacherId: user.id,
-      department: formData.department || user.department || "General",
-      credits: parseInt(formData.credits),
-      enrollmentPassword: formData.enrollmentPassword,
-      description: formData.description,
-      enrolledStudents: [],
+    setSaving(true)
+    setError(null)
+    try {
+      await coursesAPI.create({
+        name: formData.name,
+        code: formData.code.toUpperCase(),
+        department: formData.department || user.department || "General",
+        credits: parseInt(formData.credits),
+        enrollmentPassword: formData.enrollmentPassword,
+        description: formData.description,
+      })
+      await fetchData()
+      setFormData({ name: "", code: "", department: "", credits: "3", enrollmentPassword: "", description: "" })
+      setOpen(false)
+    } catch (err: any) {
+      setError(err.message || "Failed to create course")
+    } finally {
+      setSaving(false)
     }
-    setCourses((prev) => [...prev, newCourse])
-    setFormData({ name: "", code: "", department: "", credits: "3", enrollmentPassword: "", description: "" })
-    setOpen(false)
   }
 
-  const handleDelete = (id: string) => {
-    setCourses((prev) => prev.filter((c) => c.id !== id))
+  const handleDelete = async (id: string) => {
+    setDeleting(id)
+    try {
+      await coursesAPI.delete(id)
+      await fetchData()
+    } catch (err: any) {
+      setError(err.message || "Failed to delete course")
+    } finally {
+      setDeleting(null)
+    }
   }
 
   return (
@@ -57,7 +72,7 @@ export function TeacherCourses() {
           <h2 className="text-2xl font-semibold text-foreground">My Courses</h2>
           <p className="text-sm text-muted-foreground">Manage your courses and enrollment settings</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); setError(null) }}>
           <DialogTrigger asChild>
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Plus className="mr-2 h-4 w-4" />
@@ -69,6 +84,9 @@ export function TeacherCourses() {
               <DialogTitle className="text-foreground">Add New Course</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleAdd} className="space-y-4">
+              {error && (
+                <p className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-2">
                   <Label className="text-foreground">Course Name</Label>
@@ -136,17 +154,21 @@ export function TeacherCourses() {
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                  Create Course
+                <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={saving}>
+                  {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</> : "Create Course"}
                 </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
+
+      {error && !open && (
+        <p className="mb-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>
+      )}
 
       {myCourses.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card p-16 text-center">
@@ -166,10 +188,13 @@ export function TeacherCourses() {
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDelete(course.id)}
+                  disabled={deleting === course.id}
                   className="h-8 w-8 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                   aria-label={`Delete ${course.name}`}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  {deleting === course.id
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Trash2 className="h-4 w-4" />}
                 </Button>
               </div>
               <p className="mb-1 text-xs font-medium uppercase tracking-wider text-primary">{course.code}</p>

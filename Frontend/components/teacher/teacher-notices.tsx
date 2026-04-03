@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Trash2, Bell, AlertTriangle, Info, AlertCircle } from "lucide-react"
+import { Plus, Trash2, Bell, AlertTriangle, Info, AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/lib/auth-context"
-import type { Notice } from "@/lib/store"
+import { noticesAPI } from "@/lib/api"
 
 const priorityConfig = {
   high: { icon: AlertTriangle, label: "High Priority", class: "bg-destructive/10 text-destructive border-destructive/20" },
@@ -18,8 +18,11 @@ const priorityConfig = {
 }
 
 export function TeacherNotices() {
-  const { user, notices, setNotices } = useAuth()
+  const { user, notices, fetchData } = useAuth()
   const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -31,25 +34,37 @@ export function TeacherNotices() {
 
   const myNotices = notices.filter((n) => n.authorId === user.id)
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
-    const newNotice: Notice = {
-      id: `n${Date.now()}`,
-      title: formData.title,
-      content: formData.content,
-      author: user.name,
-      authorId: user.id,
-      date: new Date().toISOString().split("T")[0],
-      priority: formData.priority,
-      department: formData.department || user.department || "General",
+    setSaving(true)
+    setError(null)
+    try {
+      await noticesAPI.create({
+        title: formData.title,
+        content: formData.content,
+        priority: formData.priority,
+        department: formData.department || user.department || "General",
+      })
+      await fetchData()
+      setFormData({ title: "", content: "", priority: "medium", department: "" })
+      setOpen(false)
+    } catch (err: any) {
+      setError(err.message || "Failed to post notice")
+    } finally {
+      setSaving(false)
     }
-    setNotices((prev) => [newNotice, ...prev])
-    setFormData({ title: "", content: "", priority: "medium", department: "" })
-    setOpen(false)
   }
 
-  const handleDelete = (id: string) => {
-    setNotices((prev) => prev.filter((n) => n.id !== id))
+  const handleDelete = async (id: string) => {
+    setDeleting(id)
+    try {
+      await noticesAPI.delete(id)
+      await fetchData()
+    } catch (err: any) {
+      setError(err.message || "Failed to delete notice")
+    } finally {
+      setDeleting(null)
+    }
   }
 
   return (
@@ -59,7 +74,7 @@ export function TeacherNotices() {
           <h2 className="text-2xl font-semibold text-foreground">Notices</h2>
           <p className="text-sm text-muted-foreground">Post and manage department notices</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); setError(null) }}>
           <DialogTrigger asChild>
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Plus className="mr-2 h-4 w-4" />
@@ -71,6 +86,9 @@ export function TeacherNotices() {
               <DialogTitle className="text-foreground">Post New Notice</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleAdd} className="space-y-4">
+              {error && (
+                <p className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>
+              )}
               <div className="space-y-2">
                 <Label className="text-foreground">Title</Label>
                 <Input
@@ -120,13 +138,19 @@ export function TeacherNotices() {
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">Post Notice</Button>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
+                <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={saving}>
+                  {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Posting...</> : "Post Notice"}
+                </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
+
+      {error && !open && (
+        <p className="mb-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>
+      )}
 
       {myNotices.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card p-16 text-center">
@@ -153,10 +177,13 @@ export function TeacherNotices() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleDelete(notice.id)}
+                    disabled={deleting === notice.id}
                     className="h-8 w-8 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                     aria-label={`Delete notice: ${notice.title}`}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {deleting === notice.id
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <Trash2 className="h-4 w-4" />}
                   </Button>
                 </div>
                 <h3 className="mb-2 text-lg font-semibold text-foreground">{notice.title}</h3>

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, DM_Serif_Display } from 'next/font/google'
+import { Toaster } from '@/components/ui/toaster'
 
 import './globals.css'
 
@@ -22,7 +23,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${dmSerif.variable} font-sans antialiased`}>{children}</body>
+      <body className={`${inter.variable} ${dmSerif.variable} font-sans antialiased`} suppressHydrationWarning>
+        {children}
+        <Toaster />
+      </body>
     </html>
   )
 }

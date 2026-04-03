@@ -1,6 +1,7 @@
 "use client"
 
 import { Bell, AlertTriangle, AlertCircle, Info } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
 
 const priorityConfig = {
@@ -10,13 +11,18 @@ const priorityConfig = {
 }
 
 export function StudentNotices() {
-  const { notices } = useAuth()
+  const { notices, fetchData } = useAuth()
 
   return (
     <div>
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-foreground">Notices</h2>
-        <p className="text-sm text-muted-foreground">Stay updated with the latest announcements from your department</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold text-foreground">Notices</h2>
+          <p className="text-sm text-muted-foreground">Stay updated with the latest announcements from your department</p>
+        </div>
+        <Button onClick={fetchData} variant="outline" size="sm">
+          Refresh Notices
+        </Button>
       </div>
 
       {notices.length === 0 ? (
