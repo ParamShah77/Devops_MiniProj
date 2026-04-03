@@ -1,20 +1,23 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Trash2, Clock } from "lucide-react"
+import { Plus, Trash2, Clock, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/lib/auth-context"
-import type { TimetableEntry } from "@/lib/store"
+import { timetableAPI } from "@/lib/api"
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
 export function TeacherTimetable() {
-  const { user, courses, timetable, setTimetable } = useAuth()
+  const { user, courses, timetable, fetchData } = useAuth()
   const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     courseId: "",
     day: "",
@@ -28,29 +31,43 @@ export function TeacherTimetable() {
   const myCourses = courses.filter((c) => c.teacherId === user.id)
   const myTimetable = timetable.filter((t) => myCourses.some((c) => c.id === t.courseId))
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
     const course = myCourses.find((c) => c.id === formData.courseId)
     if (!course) return
 
-    const entry: TimetableEntry = {
-      id: `tt${Date.now()}`,
-      courseId: course.id,
-      courseName: course.name,
-      courseCode: course.code,
-      day: formData.day,
-      startTime: formData.startTime,
-      endTime: formData.endTime,
-      room: formData.room,
-      teacher: user.name,
+    setSaving(true)
+    setError(null)
+    try {
+      await timetableAPI.create({
+        courseId: course.id,
+        courseName: course.name,
+        courseCode: course.code,
+        day: formData.day,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        room: formData.room,
+      })
+      await fetchData()
+      setFormData({ courseId: "", day: "", startTime: "", endTime: "", room: "" })
+      setOpen(false)
+    } catch (err: any) {
+      setError(err.message || "Failed to add timetable entry")
+    } finally {
+      setSaving(false)
     }
-    setTimetable((prev) => [...prev, entry])
-    setFormData({ courseId: "", day: "", startTime: "", endTime: "", room: "" })
-    setOpen(false)
   }
 
-  const handleDelete = (id: string) => {
-    setTimetable((prev) => prev.filter((t) => t.id !== id))
+  const handleDelete = async (id: string) => {
+    setDeleting(id)
+    try {
+      await timetableAPI.delete(id)
+      await fetchData()
+    } catch (err: any) {
+      setError(err.message || "Failed to delete timetable entry")
+    } finally {
+      setDeleting(null)
+    }
   }
 
   const groupedByDay = DAYS.map((day) => ({
@@ -65,7 +82,7 @@ export function TeacherTimetable() {
           <h2 className="text-2xl font-semibold text-foreground">Timetable</h2>
           <p className="text-sm text-muted-foreground">Manage class schedules for your courses</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); setError(null) }}>
           <DialogTrigger asChild>
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={myCourses.length === 0}>
               <Plus className="mr-2 h-4 w-4" />
@@ -77,6 +94,9 @@ export function TeacherTimetable() {
               <DialogTitle className="text-foreground">Add Timetable Entry</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleAdd} className="space-y-4">
+              {error && (
+                <p className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>
+              )}
               <div className="space-y-2">
                 <Label className="text-foreground">Course</Label>
                 <Select value={formData.courseId} onValueChange={(v) => setFormData({ ...formData, courseId: v })}>
@@ -133,13 +153,19 @@ export function TeacherTimetable() {
                 />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">Add Entry</Button>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
+                <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={saving}>
+                  {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Adding...</> : "Add Entry"}
+                </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
+
+      {error && !open && (
+        <p className="mb-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>
+      )}
 
       {groupedByDay.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card p-16 text-center">
@@ -171,10 +197,13 @@ export function TeacherTimetable() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDelete(entry.id)}
+                      disabled={deleting === entry.id}
                       className="h-8 w-8 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                       aria-label={`Remove ${entry.courseName} from ${day}`}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {deleting === entry.id
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <Trash2 className="h-4 w-4" />}
                     </Button>
                   </div>
                 ))}

@@ -34,30 +34,33 @@ export function AuthForm({ mode, role, onNavigate }: AuthFormProps) {
     setError("")
     setLoading(true)
 
-    await new Promise((r) => setTimeout(r, 500))
-
-    if (mode === "login") {
-      const success = login(email, password, role)
-      if (!success) {
-        setError("Invalid credentials. Try: alex@meridian.edu (student) or sarah@meridian.edu (teacher)")
+    try {
+      if (mode === "login") {
+        const success = await login(email, password, role)
+        if (!success) {
+          setError("Invalid credentials. Please check your email, password, and role.")
+        }
+      } else {
+        if (!name.trim()) {
+          setError("Please enter your full name")
+          setLoading(false)
+          return
+        }
+        if (!department) {
+          setError("Please select a department")
+          setLoading(false)
+          return
+        }
+        const success = await signup(name, email, password, role, department)
+        if (!success) {
+          setError("Registration failed. This email may already be in use.")
+        }
       }
-    } else {
-      if (!name.trim()) {
-        setError("Please enter your full name")
-        setLoading(false)
-        return
-      }
-      if (!department) {
-        setError("Please select a department")
-        setLoading(false)
-        return
-      }
-      const success = signup(name, email, password, role, department)
-      if (!success) {
-        setError("An account with this email already exists")
-      }
+    } catch (error) {
+      setError("An error occurred. Please try again.")
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (

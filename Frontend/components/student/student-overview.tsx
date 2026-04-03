@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { BookOpen, Clock, Bell, AlertTriangle } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
@@ -9,6 +10,12 @@ interface StudentOverviewProps {
 
 export function StudentOverview({ onTabChange }: StudentOverviewProps) {
   const { user, courses, timetable, notices } = useAuth()
+  const [dayName, setDayName] = useState("")
+
+  useEffect(() => {
+    const today = new Date()
+    setDayName(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][today.getDay()])
+  }, [])
 
   if (!user) return null
 
@@ -16,8 +23,6 @@ export function StudentOverview({ onTabChange }: StudentOverviewProps) {
   const enrolledCourseIds = enrolledCourses.map((c) => c.id)
   const myTimetable = timetable.filter((t) => enrolledCourseIds.includes(t.courseId))
 
-  const today = new Date()
-  const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][today.getDay()]
   const todayClasses = myTimetable.filter((t) => t.day === dayName).sort((a, b) => a.startTime.localeCompare(b.startTime))
 
   const highPriorityNotices = notices.filter((n) => n.priority === "high")

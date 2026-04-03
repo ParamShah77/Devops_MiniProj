@@ -16,8 +16,13 @@ type Page =
   | "dashboard"
 
 function AppContent() {
-  const { user, logout } = useAuth()
+  const { user, logout, loading } = useAuth()
   const [page, setPage] = useState<Page>("landing")
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (user) {
@@ -28,6 +33,14 @@ function AppContent() {
   const handleLogout = () => {
     logout()
     setPage("landing")
+  }
+
+  if (!mounted || loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    )
   }
 
   if (user && page === "dashboard") {
