@@ -1,4 +1,3 @@
----
 - name: Configure EC2 and Deploy Web App
   hosts: webservers
   become: yes
@@ -8,9 +7,9 @@
       apt:
         update_cache: yes
 
-    - name: Install Node.js and NPM (Adjust if using Python/Java)
+    - name: Install Node.js and NPM
       apt:
-        name: 
+        name:
           - nodejs
           - npm
         state: present
@@ -26,12 +25,22 @@
         src: ./
         dest: /var/www/myapp/
 
-    - name: Install app dependencies
+    - name: Install Backend dependencies
       command: npm install
       args:
-        chdir: /var/www/myapp/
+        chdir: /var/www/myapp/backend/
 
-    - name: Start the application
-      shell: nohup node index.js > app.log 2>&1 &
+    - name: Install Frontend dependencies
+      command: npm install
       args:
-        chdir: /var/www/myapp/
+        chdir: /var/www/myapp/frontend/
+
+    - name: Start Backend server
+      shell: nohup node index.js > backend.log 2>&1 &
+      args:
+        chdir: /var/www/myapp/backend/
+
+    - name: Start Frontend server
+      shell: nohup npm start > frontend.log 2>&1 &
+      args:
+        chdir: /var/www/myapp/frontend/
