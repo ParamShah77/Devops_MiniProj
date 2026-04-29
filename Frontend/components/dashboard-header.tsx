@@ -40,7 +40,7 @@ export function DashboardHeader({ activeTab, onTabChange, onLogout }: DashboardH
             <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
           <div className="hidden sm:block">
-            <p className="text-sm font-semibold text-foreground">Meridian University</p>
+            <p className="text-sm font-semibold text-foreground">Sardar Patel Institute of Technology</p>
             <p className="text-xs text-muted-foreground">{isTeacher ? "Faculty" : "Student"} Portal</p>
           </div>
         </div>

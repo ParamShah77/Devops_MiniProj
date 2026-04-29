@@ -128,10 +128,10 @@ export const DEMO_NOTICES: Notice[] = [
 
 export const DEMO_USERS = {
   students: [
-    { id: "s1", name: "Alex Johnson", email: "alex@meridian.edu", role: "student" as UserRole, department: "Computer Science" },
+    { id: "s1", name: "Alex Johnson", email: "alex@spit.ac.in", role: "student" as UserRole, department: "Computer Science" },
   ],
   teachers: [
-    { id: "t1", name: "Dr. Sarah Mitchell", email: "sarah@meridian.edu", role: "teacher" as UserRole, department: "Computer Science" },
-    { id: "t2", name: "Prof. James Chen", email: "james@meridian.edu", role: "teacher" as UserRole, department: "Mathematics" },
+    { id: "t1", name: "Dr. Sarah Mitchell", email: "sarah@spit.ac.in", role: "teacher" as UserRole, department: "Computer Science" },
+    { id: "t2", name: "Prof. James Chen", email: "james@spit.ac.in", role: "teacher" as UserRole, department: "Mathematics" },
   ],
 }

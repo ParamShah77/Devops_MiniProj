@@ -8,8 +8,8 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const dmSerif = DM_Serif_Display({ weight: '400', subsets: ['latin'], variable: '--font-dm-serif' })
 
 export const metadata: Metadata = {
-  title: 'Meridian University - Student & Faculty Portal',
-  description: 'Meridian University academic portal for students and faculty. Manage courses, timetables, and notices.',
+  title: 'Sardar Patel Institute of Technology - Student & Faculty Portal',
+  description: 'Sardar Patel Institute of Technology academic portal for students and faculty. Manage courses, timetables, and notices.',
 }
 
 export const viewport: Viewport = {

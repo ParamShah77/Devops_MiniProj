@@ -76,7 +76,7 @@ export function AuthForm({ mode, role, onNavigate }: AuthFormProps) {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
               <GraduationCap className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold text-card">Meridian University</span>
+            <span className="text-lg font-semibold text-card">Sardar Patel Institute of Technology</span>
           </div>
         </div>
         <div>
@@ -89,7 +89,7 @@ export function AuthForm({ mode, role, onNavigate }: AuthFormProps) {
               : "Manage your courses, update timetables, and communicate important notices to your students."}
           </p>
         </div>
-        <p className="text-xs text-card/30">Meridian University Academic Portal</p>
+        <p className="text-xs text-card/30">Sardar Patel Institute of Technology Academic Portal</p>
       </div>
 
       {/* Right Panel */}
@@ -105,7 +105,7 @@ export function AuthForm({ mode, role, onNavigate }: AuthFormProps) {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <GraduationCap className="h-4 w-4 text-primary-foreground" />
               </div>
-              <span className="text-sm font-semibold text-foreground">Meridian University</span>
+              <span className="text-sm font-semibold text-foreground">Sardar Patel Institute of Technology</span>
             </div>
             <h1 className="text-2xl font-semibold text-foreground">
               {mode === "login" ? `${roleLabel} Sign In` : `${roleLabel} Registration`}
@@ -137,7 +137,7 @@ export function AuthForm({ mode, role, onNavigate }: AuthFormProps) {
               <Input
                 id="email"
                 type="email"
-                placeholder={role === "student" ? "student@meridian.edu" : "faculty@meridian.edu"}
+                placeholder={role === "student" ? "student@spit.ac.in" : "faculty@spit.ac.in"}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -224,8 +224,8 @@ export function AuthForm({ mode, role, onNavigate }: AuthFormProps) {
               <p className="text-xs font-medium text-muted-foreground">Demo Credentials</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {role === "student"
-                  ? "Email: alex@meridian.edu | Password: any"
-                  : "Email: sarah@meridian.edu | Password: any"}
+                  ? "Email: alex@spit.ac.in | Password: any"
+                  : "Email: sarah@spit.ac.in | Password: any"}
               </p>
             </div>
           )}

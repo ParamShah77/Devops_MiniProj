@@ -18,7 +18,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               <GraduationCap className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-foreground">Meridian University</h1>
+              <h1 className="text-lg font-semibold text-foreground">Sardar Patel Institute of Technology</h1>
               <p className="text-xs text-muted-foreground">Academic Portal</p>
             </div>
           </div>
@@ -121,7 +121,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       <footer className="border-t border-border bg-foreground px-6 py-10 text-center">
         <div className="flex items-center justify-center gap-2">
           <GraduationCap className="h-5 w-5 text-card/60" />
-          <span className="text-sm text-card/60">Meridian University Academic Portal</span>
+          <span className="text-sm text-card/60">Sardar Patel Institute of Technology Academic Portal</span>
         </div>
       </footer>
     </div>
