@@ -35,8 +35,13 @@
       args:
         chdir: /var/www/myapp/Frontend/
 
+    - name: Create Frontend environment file
+      copy:
+        content: "NEXT_PUBLIC_API_URL=http://13.233.33.245:5000/api\n"
+        dest: /var/www/myapp/Frontend/.env.local
+
     - name: Start Backend server
-      shell: nohup node index.js > backend.log 2>&1 &
+      shell: nohup node server.js > backend.log 2>&1 &
       args:
         chdir: /var/www/myapp/Backend/
 
