@@ -20,25 +20,38 @@
         state: directory
         owner: "{{ ansible_user_id }}"
 
-    - name: Copy code from workspace to local machine
-      copy:
+    - name: Copy project files
+      synchronize:
         src: ./
         dest: /home/{{ ansible_user_id }}/myapp/
+        recursive: yes
+        delete: no
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=.git"
+          - "--exclude=.scannerwork"
+          - "--exclude=Frontend/node_modules"
+          - "--exclude=Backend/node_modules"
 
     - name: Install Backend dependencies
-      command: npm install
-      args:
-        chdir: /home/{{ ansible_user_id }}/myapp/Backend/
+      npm:
+        path: /home/{{ ansible_user_id }}/myapp/Backend/
 
     - name: Install Frontend dependencies
-      command: npm install
-      args:
-        chdir: /home/{{ ansible_user_id }}/myapp/Frontend/
+      npm:
+        path: /home/{{ ansible_user_id }}/myapp/Frontend/
 
     - name: Create Frontend environment file
       copy:
-        content: "NEXT_PUBLIC_API_URL=http://localhost:5000/api\n"
+        content: |
+          NEXT_PUBLIC_API_URL=http://localhost:5000/api
         dest: /home/{{ ansible_user_id }}/myapp/Frontend/.env.local
+
+    - name: Kill existing backend process
+      shell: pkill -f "node server.js" || true
+
+    - name: Kill existing frontend process
+      shell: pkill -f "next" || true
 
     - name: Start Backend server
       shell: nohup node server.js > backend.log 2>&1 &
