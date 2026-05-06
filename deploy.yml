@@ -48,10 +48,12 @@
         dest: /home/{{ ansible_user_id }}/myapp/Frontend/.env.local
 
     - name: Kill existing backend process
-      shell: pkill -f "node server.js" || true
+      shell: pkill -f "node server.js"
+      ignore_errors: yes
 
     - name: Kill existing frontend process
-      shell: pkill -f "next" || true
+      shell: pkill -f "next"
+      ignore_errors: yes
 
     - name: Start Backend server
       shell: nohup node server.js > backend.log 2>&1 &
