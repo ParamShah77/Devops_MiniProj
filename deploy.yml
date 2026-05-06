@@ -1,5 +1,5 @@
-- name: Configure EC2 and Deploy Web App
-  hosts: webservers
+- name: Configure Local Machine and Deploy Web App
+  hosts: local
   become: yes
 
   tasks:
@@ -16,36 +16,36 @@
 
     - name: Create app directory
       file:
-        path: /var/www/myapp
+        path: /home/{{ ansible_user_id }}/myapp
         state: directory
-        owner: ubuntu
+        owner: "{{ ansible_user_id }}"
 
-    - name: Copy code from Jenkins workspace to AWS server
+    - name: Copy code from workspace to local machine
       copy:
         src: ./
-        dest: /var/www/myapp/
+        dest: /home/{{ ansible_user_id }}/myapp/
 
     - name: Install Backend dependencies
       command: npm install
       args:
-        chdir: /var/www/myapp/Backend/
+        chdir: /home/{{ ansible_user_id }}/myapp/Backend/
 
     - name: Install Frontend dependencies
       command: npm install
       args:
-        chdir: /var/www/myapp/Frontend/
+        chdir: /home/{{ ansible_user_id }}/myapp/Frontend/
 
     - name: Create Frontend environment file
       copy:
-        content: "NEXT_PUBLIC_API_URL=http://13.233.33.245:5000/api\n"
-        dest: /var/www/myapp/Frontend/.env.local
+        content: "NEXT_PUBLIC_API_URL=http://localhost:5000/api\n"
+        dest: /home/{{ ansible_user_id }}/myapp/Frontend/.env.local
 
     - name: Start Backend server
       shell: nohup node server.js > backend.log 2>&1 &
       args:
-        chdir: /var/www/myapp/Backend/
+        chdir: /home/{{ ansible_user_id }}/myapp/Backend/
 
     - name: Start Frontend server
       shell: nohup env HOST=0.0.0.0 npm run dev > frontend.log 2>&1 &
       args:
-        chdir: /var/www/myapp/Frontend/
+        chdir: /home/{{ ansible_user_id }}/myapp/Frontend/
