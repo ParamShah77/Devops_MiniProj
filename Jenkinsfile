@@ -24,18 +24,5 @@ pipeline {
                 }
             }
         }
-
-        stage('Deploy with Ansible') {
-            steps {
-                script {
-                    // Runs the playbook using Linux shell directly or WSL on Windows agents
-                    if (isUnix()) {
-                        sh 'ansible-playbook -i hosts.ini deploy.yml'
-                    } else {
-                        bat 'wsl ansible-playbook -i hosts.ini deploy.yml'
-                    }
-                }
-            }
-        }
     }
 }
