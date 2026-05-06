@@ -1,6 +1,5 @@
 - name: Configure Local Machine and Deploy Web App
   hosts: local
-  become: yes
 
   tasks:
     - name: Update apt cache
