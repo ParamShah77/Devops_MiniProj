@@ -5,14 +5,13 @@
 
     - name: Create app directory
       file:
-        path: /home/{{ ansible_user_id }}/myapp
+        path: /var/jenkins_home/myapp
         state: directory
-        owner: "{{ ansible_user_id }}"
 
     - name: Copy project files
       synchronize:
         src: ./
-        dest: /home/{{ ansible_user_id }}/myapp/
+        dest: /var/jenkins_home/myapp
         recursive: yes
         delete: no
         rsync_opts:
@@ -24,17 +23,17 @@
 
     - name: Install Backend dependencies
       npm:
-        path: /home/{{ ansible_user_id }}/myapp/Backend/
+        path: /var/jenkins_home/myapp/Backend/
 
     - name: Install Frontend dependencies
       npm:
-        path: /home/{{ ansible_user_id }}/myapp/Frontend/
+        path: /var/jenkins_home/myapp/Frontend/
 
     - name: Create Frontend environment file
       copy:
         content: |
           NEXT_PUBLIC_API_URL=http://localhost:5000/api
-        dest: /home/{{ ansible_user_id }}/myapp/Frontend/.env.local
+        dest: /var/jenkins_home/myapp/Frontend/.env.local
 
     - name: Kill existing backend process
       shell: pkill -f "node server.js"
@@ -47,9 +46,9 @@
     - name: Start Backend server
       shell: nohup node server.js > backend.log 2>&1 &
       args:
-        chdir: /home/{{ ansible_user_id }}/myapp/Backend/
+        chdir: /var/jenkins_home/myapp/Backend/
 
     - name: Start Frontend server
       shell: nohup env HOST=0.0.0.0 npm run dev > frontend.log 2>&1 &
       args:
-        chdir: /home/{{ ansible_user_id }}/myapp/Frontend/
+        chdir: /var/jenkins_home/myapp/Frontend/
