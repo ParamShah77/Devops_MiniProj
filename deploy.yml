@@ -35,6 +35,14 @@
           NEXT_PUBLIC_API_URL=http://localhost:5000/api
         dest: /var/jenkins_home/myapp/Frontend/.env.local
 
+    - name: Create Backend environment file
+      copy:
+        content: |
+          MONGODB_URI=mongodb://host.docker.internal:27017/university
+          PORT=5000
+          NODE_ENV=development
+        dest: /var/jenkins_home/myapp/Backend/.env
+
     - name: Kill existing backend process
       shell: pkill -f "node server.js"
       ignore_errors: yes
